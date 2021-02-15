@@ -26,8 +26,8 @@ def configure(conf):
 def build(bld):
     rtems.build(bld)
 
-    bld(features = "c program",
-        target = "hello.exe",
-        cflags = "-g -O2",
-        source = ["hello.c", "init.c"]
+    bld(features = 'c cprogram',
+        target = 'hello.exe',
+        cflags = '-g -O2',
+        source = ['hello.c', 'init.c'])
  
