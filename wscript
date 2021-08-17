@@ -1,7 +1,8 @@
-# Hello World WAF Script
+#include <rtems/bsd/bsd.h>
 
 from __future__ import print_function
 rtems_version = "5"
+
 
 try:
     import rtems_waf.rtems as rtems
@@ -27,7 +28,13 @@ def build(bld):
     rtems.build(bld)
 
     bld(features = 'c cprogram',
-        target = 'hello.exe',
-        cflags = '-g -O2',
-        source = ['hello.c', 'init.c'])
- 
+        target = 'hello',
+        includes = '',
+        source = ['hello.c', 'init.c'],
+        lib = ['bsd', 'm'])
+
+    bld(rule='powerpc-rtems5-objcopy -O binary ${SRC} ${TGT}', source='hello', target='hello.bin')
+    bld(rule='gzip -9 -f -c ${SRC} > ${TGT}', source='hello.bin', target="hello.bin.gz")
+    bld(rule='mkimage.py -A ppc -O linux -T kernel -a 0x4000 -e 0x4000 -n RTEMS -d ${SRC} ${TGT}',
+        source="hello.bin.gz", target="hello.img")
+
