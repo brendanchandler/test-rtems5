@@ -30,14 +30,22 @@ rtems_task Init(rtems_task_argument ignored)
     rtems_bsd_setlogpriority("debug");
 
     rtems_bsd_ifconfig_lo0();
-    
+
+#if 0
     char const * ifcfg[] = {
 	"ifconfig", ifname,
 	"inet", ip,
 	"netmask", netmask,
 	NULL
     };
+    // not exactly sure the difference between rtems_bsd_command_route
+    // and rtems_bsd_ifconfig.  perhaps just how arguments are passed?
+    exit_code = rtems_bsd_command_ifconfig(RTEMS_ARGS(ifcfg), ifcfg)
+#else
+	
     exit_code = rtems_bsd_ifconfig(ifname, ip, netmask, gateway);
+#endif
+    
     if (exit_code != EX_OK) {
 	perror("rtems_bsd_command_ifconfig() failed to set up network.");
     }
@@ -79,7 +87,7 @@ rtems_task Init(rtems_task_argument ignored)
     printf("-------------- NETSTAT ------------------\n");
     rtems_bsd_command_netstat(2, (char**) netstat_args);
     
-    // Start an rtems shell before main, for debugging RTEMS system issues
+    // Start an rtems shell to test and see if ping etc work
     rtems_shell_init("SHLL", RTEMS_MINIMUM_STACK_SIZE * 4,
                      100, "/dev/console",
                      false, true,
