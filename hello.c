@@ -38,7 +38,7 @@ rtems_task Init(rtems_task_argument ignored)
 	"netmask", netmask,
 	NULL
     };
-    // not exactly sure the difference between rtems_bsd_command_route
+    // not exactly sure the difference between rtems_bsd_command_ifconfig
     // and rtems_bsd_ifconfig.  perhaps just how arguments are passed?
     exit_code = rtems_bsd_command_ifconfig(RTEMS_ARGS(ifcfg), ifcfg)
 #else
