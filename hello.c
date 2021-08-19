@@ -8,15 +8,19 @@
 #include <machine/rtems-bsd-commands.h>
 #include <sysexits.h>
 #include <rtems/shell.h>
+#include <machine/rtems-bsd-rc-conf.h>
+#include <errno.h>
 
-rtems_task Init(rtems_task_argument ignored)
+void
+POSIX_Init(rtems_task_argument ignored)
 {
     
     int exit_code;
-    char const * ip = "164.54.8.169";
-    char const * gateway = "164.54.8.1";
-    char const * ifname = "tsec2";
-    char const * netmask = "255.255.252.0";
+    char ip[] = "164.54.8.169";
+    char gateway[] = "164.54.8.1";
+    char ifname[] = "tsec2";
+    char netmask[] = "255.255.252.0";
+    char hostname[] = "iocanj1";
 
     int sc = rtems_bsd_initialize();
     assert(sc == RTEMS_SUCCESSFUL);
@@ -31,27 +35,18 @@ rtems_task Init(rtems_task_argument ignored)
 
     rtems_bsd_ifconfig_lo0();
 
+
 #if 0
-    char const * ifcfg[] = {
-	"ifconfig", ifname,
-	"inet", ip,
-	"netmask", netmask,
-	NULL
-    };
-    // not exactly sure the difference between rtems_bsd_command_ifconfig
-    // and rtems_bsd_ifconfig.  perhaps just how arguments are passed?
-    exit_code = rtems_bsd_command_ifconfig(RTEMS_ARGS(ifcfg), ifcfg)
-#else
 	
     exit_code = rtems_bsd_ifconfig(ifname, ip, netmask, gateway);
-#endif
+
     
     if (exit_code != EX_OK) {
 	perror("rtems_bsd_command_ifconfig() failed to set up network.");
     }
 
-#if 0
-    char const * dflt_route[] = {
+
+    char * dflt_route[] = {
 	"route", "add",
 	"-host", gateway,
 	"-iface", ifname,
@@ -59,7 +54,7 @@ rtems_task Init(rtems_task_argument ignored)
     };
 
 
-    char const * dflt_route2[] = {
+    char * dflt_route2[] = {
 	"route", "add", "default", gateway, NULL
     };
 
@@ -71,6 +66,42 @@ rtems_task Init(rtems_task_argument ignored)
     exit_code = rtems_bsd_command_route(RTEMS_BSD_ARGC(dflt_route2), dflt_route2);
     if (exit_code != EX_OK) {
 	perror("rtems_bsd_command_route failed to set up default route.");
+    }
+#else
+    size_t const RC_SIZE = 256;
+    char rc_conf[RC_SIZE];
+    
+    sc = snprintf(rc_conf, RC_SIZE,
+		  "# /etc/rc.conf\n" \
+		  "hostname=\"%s\"\n" \
+		  "ifconfig_%s=\"inet %s netmask %s\"\n" \
+		  "defaultrouter=\"%s\"\n" \
+		  "telnetd_enable=\"YES\"\n",
+		  hostname, ifname, ip, netmask, gateway);
+    assert(sc < RC_SIZE); // ensure rc_conf buffer is large enough
+
+    FILE *rc;
+    int   r;
+
+    /*
+     * Create the /etc/rc,conf, assume /etc exists.
+     */
+    rc = fopen("/etc/rc.conf", "w");
+    if (rc_conf == NULL) {
+	printf("error: cannot create /etc/rc.conf\n");
+	exit(1);
+    }
+
+    fprintf(rc, rc_conf);
+    fclose(rc);
+
+    /*
+     * Arguments are timeout and trace
+     */
+    r = rtems_bsd_run_etc_rc_conf(30, false);
+    if (r < 0) {
+	printf("error: loading /etc/rc.conf failed: %s\n",strerror(errno));
+	exit(1);
     }
 #endif
     
