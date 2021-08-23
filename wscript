@@ -30,6 +30,7 @@ def build(bld):
     bld(features = 'c cprogram',
         target = 'hello',
         includes = '',
+	cflags = '-g',
         source = ['hello.c', 'init.c'],
         lib = ['bsd', 'm'])
 
